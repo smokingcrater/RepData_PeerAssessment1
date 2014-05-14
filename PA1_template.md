@@ -8,16 +8,20 @@ __Show any code that is needed to__
 
 * __Load the data (i.e. read.csv())__
 
-```{r retrieve_data, echo=TRUE}
+
+```r
 df_activity_raw <- read.csv("activity.csv")
 ```
 
+
 * __Process/transform the data (if necessary) into a format suitable for your analysis__
 
-```{r process_data, echo=TRUE}
-df_activity_raw[,2] <- as.Date(df_activity_raw[,2], format="%Y-%m-%d")
-df_activity_processed <- aggregate(steps ~ date, data=df_activity_raw, FUN=sum)
+
+```r
+df_activity_raw[, 2] <- as.Date(df_activity_raw[, 2], format = "%Y-%m-%d")
+df_activity_processed <- aggregate(steps ~ date, data = df_activity_raw, FUN = sum)
 ```
+
 
 ## What is mean total number of steps taken per day?
 
@@ -25,22 +29,40 @@ __For this part of the assignment, you can ignore the missing values in the data
 
 * __Make a histogram of the total number of steps taken each day__
 
-```{r plot_steps_per_day, echo=TRUE}
-hist(df_activity_processed[,2], main="Total Number of Steps Taken Each Day", xlab="Steps", col="red")
-rug(df_activity_processed[,2])
+
+```r
+hist(df_activity_processed[, 2], main = "Total Number of Steps Taken Each Day", 
+    xlab = "Steps", col = "red")
+rug(df_activity_processed[, 2])
 ```
+
+![plot of chunk plot_steps_per_day](figure/plot_steps_per_day.png) 
+
 
 * __Calculate and report the mean and median total number of steps taken per day__
 
-```{r calculate_mean_and_median, echo=TRUE}
-steps_mean <- mean(df_activity_processed[,2])
+
+```r
+steps_mean <- mean(df_activity_processed[, 2])
 steps_mean
-steps_median <- median(df_activity_processed[,2])
+```
+
+```
+## [1] 10766
+```
+
+```r
+steps_median <- median(df_activity_processed[, 2])
 steps_median
 ```
 
-The mean is `r sprintf("%.2f", steps_mean)`.  
-The median is `r sprintf("%.2f", steps_median)`.
+```
+## [1] 10765
+```
+
+
+The mean is 10766.19.  
+The median is 10765.00.
 
 ## What is the average daily activity pattern?
 
