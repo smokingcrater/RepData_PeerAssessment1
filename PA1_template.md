@@ -10,7 +10,7 @@ __Show any code that is needed to__
 
 
 ```r
-df_activity_raw <- read.csv("activity.csv")
+df_activity <- read.csv("activity.csv")
 ```
 
 
@@ -18,8 +18,12 @@ df_activity_raw <- read.csv("activity.csv")
 
 
 ```r
-df_activity_raw[, 2] <- as.Date(df_activity_raw[, 2], format = "%Y-%m-%d")
-df_activity_processed <- aggregate(steps ~ date, data = df_activity_raw, FUN = sum)
+# Combine the date and time.
+datetime <- strptime(paste(as.character(df_activity[, 2]), as.character(sprintf("%04d00", 
+    df_activity[, 3]))), format = "%Y-%m-%d %H%M%S")
+# Convert the raw date representation to a Date() format.
+df_activity[, 2] <- as.Date(df_activity[, 2], format = "%Y-%m-%d")
+df_activity <- data.frame(df_activity, datetime)
 ```
 
 
@@ -31,9 +35,12 @@ __For this part of the assignment, you can ignore the missing values in the data
 
 
 ```r
-hist(df_activity_processed[, 2], main = "Total Number of Steps Taken Each Day", 
-    xlab = "Steps", col = "red")
-rug(df_activity_processed[, 2])
+# Determine the steps per date.
+df_part1 <- aggregate(steps ~ date, data = df_activity, FUN = sum)
+# Plot using base plot.
+hist(df_part1[, 2], main = "Total Number of Steps Taken Each Day", xlab = "Steps", 
+    col = "red")
+rug(df_part1[, 2])
 ```
 
 ![plot of chunk plot_steps_per_day](figure/plot_steps_per_day.png) 
@@ -43,21 +50,8 @@ rug(df_activity_processed[, 2])
 
 
 ```r
-steps_mean <- mean(df_activity_processed[, 2])
-steps_mean
-```
-
-```
-## [1] 10766
-```
-
-```r
-steps_median <- median(df_activity_processed[, 2])
-steps_median
-```
-
-```
-## [1] 10765
+steps_mean <- mean(df_part1[, 2])
+steps_median <- median(df_part1[, 2])
 ```
 
 
@@ -67,6 +61,24 @@ The median is 10765.00.
 ## What is the average daily activity pattern?
 
 * __Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)__
+
+Instead of using the base plotting system, I've chosen the ggplot2 plotting system
+
+
+```r
+# Determine the steps per 5 minute interval.
+df_part2 <- aggregate(steps ~ interval, data = df_activity, FUN = mean)
+# Plot using ggplot2.
+library(ggplot2)
+plot2 <- ggplot(data = df_part2, aes(x = interval, y = steps))
+plot2 <- plot2 + xlab("Interval") + ylab("Steps")
+plot2 <- plot2 + ggtitle("Average Number of Steps per Interval")
+plot2 <- plot2 + geom_line()
+plot2
+```
+
+![plot of chunk plot_average_steps_per_interval](figure/plot_average_steps_per_interval.png) 
+
 
 * __Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?__
 
