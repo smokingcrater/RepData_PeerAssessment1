@@ -15,11 +15,15 @@ df_activity <- read.csv("activity.csv")
 * __Process/transform the data (if necessary) into a format suitable for your analysis__
 
 ```{r process_data, echo=TRUE}
+# Convert the raw date representation to a Date() format.
+day <- strptime(as.character(df_activity[,2]), format="%Y-%m-%d")
+# Convert the time to 2400 hour time (always 4 digits)
+mins <- sprintf("%04d", df_activity[,3])
 # Combine the date and time.
 datetime <- strptime(paste(as.character(df_activity[,2]), as.character(sprintf("%04d00", df_activity[,3]))), format="%Y-%m-%d %H%M%S")
-# Convert the raw date representation to a Date() format.
-df_activity[,2] <- as.Date(df_activity[,2], format="%Y-%m-%d")
-df_activity <- data.frame(df_activity, datetime)
+# Extend the data frame to include these new date/time columns.
+df_activity <- data.frame(df_activity, day, mins, datetime)
+
 ```
 
 ## What is mean total number of steps taken per day?
@@ -29,8 +33,8 @@ __For this part of the assignment, you can ignore the missing values in the data
 * __Make a histogram of the total number of steps taken each day__
 
 ```{r plot_steps_per_day, echo=TRUE}
-# Determine the steps per date.
-df_part1 <- aggregate(steps ~ date, data=df_activity, FUN=sum)
+# Determine the steps per day.
+df_part1 <- aggregate(steps ~ day, data=df_activity, FUN=sum)
 # Plot using base plot.
 hist(df_part1[,2], main="Total Number of Steps Taken Each Day", xlab="Steps", col="red")
 rug(df_part1[,2])
@@ -38,7 +42,7 @@ rug(df_part1[,2])
 
 * __Calculate and report the mean and median total number of steps taken per day__
 
-```{r calculate_mean_and_median, echo=TRUE}
+```{r compute_mean_and_median, echo=TRUE}
 steps_mean <- mean(df_part1[,2])
 steps_median <- median(df_part1[,2])
 ```
@@ -50,21 +54,30 @@ The median is `r sprintf("%.2f", steps_median)`.
 
 * __Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)__
 
-Instead of using the base plotting system, I've chosen the ggplot2 plotting system
+Instead of using the base plotting system, I've chosen the ggplot2 plotting system.
 
 ```{r plot_average_steps_per_interval, echo=TRUE}
 # Determine the steps per 5 minute interval.
-df_part2 <- aggregate(steps ~ interval, data=df_activity, FUN=mean)
+df_part2 <- aggregate(steps ~ mins, data=df_activity, FUN=mean)
 # Plot using ggplot2.
 library(ggplot2)
-plot2 <- ggplot(data=df_part2, aes(x=interval, y=steps))
-plot2 <- plot2 + xlab("Interval") + ylab("Steps")
+plot2 <- ggplot(data=df_part2, aes(x=mins, y=steps, group=1))
+plot2 <- plot2 + xlab("Intervals") + ylab("Steps")
 plot2 <- plot2 + ggtitle("Average Number of Steps per Interval")
+plot2 <- plot2 + scale_x_discrete(breaks=df_part2[, "mins"][seq(1, length(df_part2[,"mins"]), by = 6)])
+plot2 <- plot2 + theme(axis.text.x = element_text(angle = -90, hjust = 1))
 plot2 <- plot2 + geom_line()
 plot2
 ```
 
 * __Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?__
+
+``` {r compute_interval_with_max_average_steps, echo=TRUE}
+steps_max <- max(df_part2[, "steps"])
+interval_max <- df_part2[df_part2[, "steps"] == steps_max, "mins"]
+```
+
+The 5-minute interval containing the max number of steps (`r steps_max`) is `r interval_max`.
 
 ## Imputing missing values
 
@@ -72,11 +85,76 @@ __Note that there are a number of days/intervals where there are missing values 
 
 * __Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)__
 
+``` {r compute_missing_values_count, echo=TRUE}
+rows_total <- nrow(df_activity)
+rows_complete <- sum(complete.cases(df_activity))
+rows_incomplete <- rows_total - rows_complete
+```
+
+Subtract the number of fully populated rows (`r rows_complete`) from the total number of rows (`r rows_total`) to determine the number of rows with missing values: `r rows_incomplete`
+
 * __Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.__
+
+``` {r determine_missing_values_cols, echo=TRUE}
+cnt_missing_steps <- length(which(is.na(df_activity[, "steps"])))
+cnt_missing_dates <- length(which(is.na(df_activity[, "date"])))
+cnt_missing_intervals <- length(which(is.na(df_activity[,"interval"])))
+```
+First, determine which columns have missing data:
+
+* steps: `r cnt_missing_steps` missing values  
+* dates: `r cnt_missing_dates` missing values  
+* intervals: `r cnt_missing_intervals` missing values
+
+Thus, a strategy needs to be devised to deal with the `r cnt_missing_steps` missing values for the _steps_ column.
+
+One solution is to substitute the rounded mean of the corresponding 5-minute interval (from df_part2 above).
 
 * __Create a new dataset that is equal to the original dataset but with the missing data filled in.__
 
+``` {r update_missing_steps_with_corresponding_averages, echo=TRUE}
+# Determine the rows which have NA
+rows_with_missing_values <- which(is.na(df_activity[, "steps"]))
+
+# Instructions specify to create a new dataset.
+df_activity_new <- df_activity
+
+for (row in rows_with_missing_values) {
+	# Get the interval corresponding row with missing steps.
+	tgt_mins <- df_activity_new[row, "mins"]
+	# Use this interval to find the corresponding mean.
+	df_activity_new[row, "steps"] <- round(df_part2[df_part2[, "mins"] == tgt_mins, "steps"])
+}
+
+# For verification purposes.
+rows_total_new <- nrow(df_activity_new)
+rows_complete_new <- sum(complete.cases(df_activity_new))
+```
+
+Checksum: The total number of rows in the updated dataset (`r rows_total_new`) is equal to the number of fully populated rows (`r rows_complete_new`) in the updated dataset.
+
 * __Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?__
+
+```{r plot_steps_per_day_new, echo=TRUE}
+# Determine the steps per day.
+df_part3 <- aggregate(steps ~ day, data=df_activity_new, FUN=sum)
+# Plot using base plot.
+hist(df_part3[,2], main="Total Number of Steps Taken Each Day (Revised)", xlab="Steps", col="green")
+rug(df_part3[,2])
+steps_mean_new <- mean(df_part3[,2])
+steps_median_new <- median(df_part3[,2])
+pct_change_mean <- (steps_mean_new / steps_mean) * 100
+pct_change_median <- (steps_median_new / steps_median) * 100
+```
+
+The revised mean/median differ nominally from the original mean/median:
+
+* Original (with NAs) mean: `r sprintf("%.2f", steps_mean)`
+* Revised (imputed values) mean: `r sprintf("%.2f", steps_mean_new)`
+* Original (with NAs) median: `r sprintf("%.2f", steps_median)`
+* Revised (imputed values) median: `r sprintf("%.2f", steps_median_new)`
+
+The effect of imputing is that both the mean and the median are slightly lowered; specifically, the revised mean is `r sprintf("%0.4f", pct_change_mean)`% of the original mean and the revised median is `r sprintf("%0.4f", pct_change_median)`% of the original median.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
