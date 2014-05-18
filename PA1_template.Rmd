@@ -19,11 +19,8 @@ df_activity <- read.csv("activity.csv")
 day <- strptime(as.character(df_activity[,2]), format="%Y-%m-%d")
 # Convert the time to 2400 hour time (always 4 digits)
 mins <- sprintf("%04d", df_activity[,3])
-# Combine the date and time.
-datetime <- strptime(paste(as.character(df_activity[,2]), as.character(sprintf("%04d00", df_activity[,3]))), format="%Y-%m-%d %H%M%S")
 # Extend the data frame to include these new date/time columns.
-df_activity <- data.frame(df_activity, day, mins, datetime)
-
+df_activity <- data.frame(df_activity, day, mins)
 ```
 
 ## What is mean total number of steps taken per day?
@@ -32,7 +29,7 @@ __For this part of the assignment, you can ignore the missing values in the data
 
 * __Make a histogram of the total number of steps taken each day__
 
-```{r plot_steps_per_day, echo=TRUE}
+```{r plot_steps_per_day, echo=TRUE, fig.align='center'}
 # Determine the steps per day.
 df_part1 <- aggregate(steps ~ day, data=df_activity, FUN=sum)
 # Plot using base plot.
@@ -47,16 +44,14 @@ steps_mean <- mean(df_part1[,2])
 steps_median <- median(df_part1[,2])
 ```
 
-The mean is `r sprintf("%.2f", steps_mean)`.  
-The median is `r sprintf("%.2f", steps_median)`.
+* Mean total number of steps taken per day: `r sprintf("%.2f", steps_mean)`
+* Median total number of steps taken per day: `r sprintf("%.2f", steps_median)`
 
 ## What is the average daily activity pattern?
 
 * __Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)__
 
-Instead of using the base plotting system, I've chosen the ggplot2 plotting system.
-
-```{r plot_average_steps_per_interval, echo=TRUE}
+```{r plot_average_steps_per_interval, echo=TRUE, fig.align='center'}
 # Determine the steps per 5 minute interval.
 df_part2 <- aggregate(steps ~ mins, data=df_activity, FUN=mean)
 # Plot using ggplot2.
@@ -100,7 +95,7 @@ cnt_missing_steps <- length(which(is.na(df_activity[, "steps"])))
 cnt_missing_dates <- length(which(is.na(df_activity[, "date"])))
 cnt_missing_intervals <- length(which(is.na(df_activity[,"interval"])))
 ```
-First, determine which columns have missing data:
+Determine which columns have missing data:
 
 * steps: `r cnt_missing_steps` missing values  
 * dates: `r cnt_missing_dates` missing values  
@@ -131,11 +126,14 @@ rows_total_new <- nrow(df_activity_new)
 rows_complete_new <- sum(complete.cases(df_activity_new))
 ```
 
-Checksum: The total number of rows in the updated dataset (`r rows_total_new`) is equal to the number of fully populated rows (`r rows_complete_new`) in the updated dataset.
+Checksum:
+
+* Number of rows in the updated dataset: (`r rows_total_new`)
+* Number of fully populated rows  in the updated dataset: (`r rows_complete_new`)
 
 * __Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?__
 
-```{r plot_steps_per_day_new, echo=TRUE}
+```{r plot_steps_per_day_new, echo=TRUE, fig.align='center'}
 # Determine the steps per day.
 df_part3 <- aggregate(steps ~ day, data=df_activity_new, FUN=sum)
 # Plot using base plot.
@@ -162,4 +160,42 @@ __For this part the weekdays() function may be of some help here. Use the datase
 
 * __Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.__
 
+```{r determine_day_types, echo=TRUE}
+# Retrieve a vector of the days.
+alldays <- weekdays(df_activity_new[, "day"])
+# Create a factor vector identifying the entry as either weekend or weekday.
+daytype <- factor(sapply(alldays, function(day) {ifelse((day == "Saturday") | (day == "Sunday"), "weekend", "weekday")}))
+# Update the dataset to reflect this identifier.
+df_activity_new <- data.frame(df_activity_new, daytype)
+```
+
 * __Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).__
+
+First create a dataframe representing average steps per 5-minute interval for both weekends and weekdays.
+
+```{r create_dataset_with_daytypes, echo=TRUE}
+# Determine average steps per 5-minute interval for weekends.
+df_subset_weekend <- aggregate(steps ~ mins, data=df_activity_new[df_activity_new[,6]=="weekend",], FUN=mean)
+fdaytype <- factor(rep("weekend", nrow(df_subset_weekend)))
+df_subset_weekend <- data.frame(df_subset_weekend, fdaytype)
+# Determine average steps per 5-minute interval for weekdays.
+df_subset_weekday <- aggregate(steps ~ mins, data=df_activity_new[df_activity_new[,6]=="weekday",], FUN=mean)
+fdaytype <- factor(rep("weekday", nrow(df_subset_weekday)))
+df_subset_weekday <- data.frame(df_subset_weekday, fdaytype)
+# Combine these weekend and weekday subsets.
+df_subset_weekdays <- rbind(df_subset_weekend, df_subset_weekday)
+```
+
+Then plot using ggplot2 with panels.
+
+```{r plot_average_steps_per_interval_by_datetype, echo=TRUE, fig.align='center'}
+# Plot using ggplot2.
+plot4 <- ggplot(data=df_subset_weekdays, aes(x=mins, y=steps, group=fdaytype))
+plot4 <- plot4 + xlab("Intervals") + ylab("Steps")
+plot4 <- plot4 + ggtitle("Average Number of Steps per Interval (Weekends vs Weekdays)")
+plot4 <- plot4 + scale_x_discrete(breaks=df_part2[, "mins"][seq(1, length(df_part2[,"mins"]), by = 6)])
+plot4 <- plot4 + theme(axis.text.x = element_text(angle = -90, hjust = 1))
+plot4 <- plot4 + facet_grid(fdaytype ~ .)
+plot4 <- plot4 + geom_line()
+plot4
+```
