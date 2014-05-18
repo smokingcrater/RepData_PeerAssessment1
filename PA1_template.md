@@ -1,3 +1,5 @@
+library(lattice)
+xyplot(steps ~ mins | fdaytype, data=df_subset_weekdays, layout=c(1,2), type="l", main="Average Number of Steps per Interval (Weekends vs Weekdays)", xlab="Intervals", ylab="Steps", scales = list(x = list(at = ticks, labels = xlabels, rot=45)))
 # Reproducible Research: Peer Assessment 1
 
 
@@ -235,6 +237,7 @@ Then plot using ggplot2 with panels.
 plot4 <- ggplot(data = df_subset_weekdays, aes(x = mins, y = steps, group = fdaytype))
 plot4 <- plot4 + xlab("Intervals") + ylab("Steps")
 plot4 <- plot4 + ggtitle("Average Number of Steps per Interval (Weekends vs Weekdays)")
+# Ticks at 30 minute intervals.
 plot4 <- plot4 + scale_x_discrete(breaks = df_part2[, "mins"][seq(1, length(df_part2[, 
     "mins"]), by = 6)])
 plot4 <- plot4 + theme(axis.text.x = element_text(angle = -90, hjust = 1))
@@ -243,5 +246,22 @@ plot4 <- plot4 + geom_line()
 plot4
 ```
 
-<img src="figure/plot_average_steps_per_interval_by_datetype.png" title="plot of chunk plot_average_steps_per_interval_by_datetype" alt="plot of chunk plot_average_steps_per_interval_by_datetype" style="display: block; margin: auto;" />
+<img src="figure/plot_average_steps_per_interval_by_datetype_ggplot2.png" title="plot of chunk plot_average_steps_per_interval_by_datetype_ggplot2" alt="plot of chunk plot_average_steps_per_interval_by_datetype_ggplot2" style="display: block; margin: auto;" />
+
+
+Just for fun, plot using lattice with panels.
+
+
+```r
+library(lattice)
+# Ticks at 30 minute intervals.
+ticks <- seq(1, length(df_part2[, "mins"]), by = 6)
+xlabels <- df_part2[, "mins"][ticks]
+xyplot(steps ~ mins | fdaytype, data = df_subset_weekdays, layout = c(1, 2), 
+    type = "l", main = "Average Number of Steps per Interval (Weekends vs Weekdays)", 
+    xlab = "Intervals", ylab = "Steps", scales = list(x = list(at = ticks, labels = xlabels, 
+        rot = 45)))
+```
+
+<img src="figure/plot_average_steps_per_interval_by_datetype_lattice.png" title="plot of chunk plot_average_steps_per_interval_by_datetype_lattice" alt="plot of chunk plot_average_steps_per_interval_by_datetype_lattice" style="display: block; margin: auto;" />
 
