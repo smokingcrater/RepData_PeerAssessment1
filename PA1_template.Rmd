@@ -1,5 +1,3 @@
-library(lattice)
-xyplot(steps ~ mins | fdaytype, data=df_subset_weekdays, layout=c(1,2), type="l", main="Average Number of Steps per Interval (Weekends vs Weekdays)", xlab="Intervals", ylab="Steps", scales = list(x = list(at = ticks, labels = xlabels, rot=45)))
 # Reproducible Research: Peer Assessment 1
 
 
